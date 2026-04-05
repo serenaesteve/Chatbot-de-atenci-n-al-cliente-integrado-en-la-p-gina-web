@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>s.chat — Atención al cliente con IA</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/modal.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+</head>
+<body>
+
+<!-- ══ MODAL AUTH ══ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal__close" onclick="Auth.closeModal()">✕</button>
+    <div id="loginForm">
+      <div class="modal__eyebrow">Bienvenido</div>
+      <div class="modal__title">Inicia sesión</div>
+      <div class="modal__sub">Accede a tu panel de s.chat</div>
+      <div class="form-success" id="loginSuccess">¡Cuenta creada! Ya puedes iniciar sesión.</div>
+      <div class="form-group">
+        <label for="loginEmail">Correo electrónico</label>
+        <input type="email" id="loginEmail" placeholder="tu@empresa.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="loginPass">Contraseña</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
+        <div class="form-error" id="loginError">Credenciales incorrectas</div>
+      </div>
+      <button class="btn-submit" id="btnLogin" onclick="Auth.doLogin()">Iniciar sesión</button>
+      <div class="modal__switch">¿No tienes cuenta? <a onclick="Auth.showRegisterView()">Regístrate gratis</a></div>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="modal__eyebrow">Empieza gratis</div>
+      <div class="modal__title">Crea tu cuenta</div>
+      <div class="modal__sub">14 días gratis · Sin tarjeta de crédito</div>
+      <div class="form-group">
+        <label for="regName">Nombre completo</label>
+        <input type="text" id="regName" placeholder="Tu nombre" autocomplete="name" />
+        <div class="form-error" id="regNameErr"></div>
+      </div>
+      <div class="form-group">
+        <label for="regEmail">Correo electrónico</label>
+        <input type="email" id="regEmail" placeholder="tu@empresa.com" autocomplete="email" />
+        <div class="form-error" id="regEmailErr"></div>
+      </div>
+      <div class="form-group">
+        <label for="regPass">Contraseña</label>
+        <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+        <div class="form-error" id="regPassErr"></div>
+      </div>
+      <button class="btn-submit" id="btnRegister" onclick="Auth.doRegister()">Crear cuenta gratis</button>
+      <div class="modal__switch">¿Ya tienes cuenta? <a onclick="Auth.showLoginView()">Inicia sesión</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL NUEVO CANAL ══ -->
+<div class="modal-overlay" id="channelModalOverlay" style="z-index:450">
+  <div class="channel-modal">
+    <div class="modal__title" style="margin-bottom:.3rem">Añadir canal</div>
+    <div class="modal__sub">Selecciona el tipo de canal y dale un nombre</div>
+    <div class="channel-types">
+      <button class="channel-type-btn" onclick="Dashboard.selectChannelType('web', this)">
+        <span class="dot" style="background:#111;width:10px;height:10px;border-radius:50%"></span>Web
+      </button>
+      <button class="channel-type-btn" onclick="Dashboard.selectChannelType('whatsapp', this)">
+        <span class="dot" style="background:#25D366;width:10px;height:10px;border-radius:50%"></span>WhatsApp
+      </button>
+      <button class="channel-type-btn" onclick="Dashboard.selectChannelType('telegram', this)">
+        <span class="dot" style="background:#0088cc;width:10px;height:10px;border-radius:50%"></span>Telegram
+      </button>
+      <button class="channel-type-btn" onclick="Dashboard.selectChannelType('slack', this)">
+        <span class="dot" style="background:#4A154B;width:10px;height:10px;border-radius:50%"></span>Slack
+      </button>
+      <button class="channel-type-btn" onclick="Dashboard.selectChannelType('teams', this)">
+        <span class="dot" style="background:#0078D4;width:10px;height:10px;border-radius:50%"></span>Teams
+      </button>
+      <button class="channel-type-btn" onclick="Dashboard.selectChannelType('messenger', this)">
+        <span class="dot" style="background:#00B2FF;width:10px;height:10px;border-radius:50%"></span>Messenger
+      </button>
+      <button class="channel-type-btn" onclick="Dashboard.selectChannelType('gmail', this)">
+        <span class="dot" style="background:#EA4335;width:10px;height:10px;border-radius:50%"></span>Gmail
+      </button>
+      <button class="channel-type-btn" onclick="Dashboard.selectChannelType('api', this)">
+        <span class="dot" style="background:#6ab04c;width:10px;height:10px;border-radius:50%"></span>API REST
+      </button>
+    </div>
+    <div class="form-field">
+      <label for="channelName">Nombre del canal</label>
+      <input type="text" id="channelName" placeholder="Ej: WhatsApp Soporte" />
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn-ghost" onclick="Dashboard.closeChannelModal()">Cancelar</button>
+      <button class="btn-add" onclick="Dashboard.saveChannel()">Guardar canal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL DETALLE CONVERSACIÓN ══ -->
+<div class="conv-detail-overlay" id="conv-detail-overlay">
+  <div class="conv-detail">
+    <div class="conv-detail__header">
+      <div class="conv-detail__title">Detalle de conversación</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-ghost" style="font-size:13px" onclick="Dashboard.closeConversation()">Marcar resuelta</button>
+        <button class="modal__close" style="position:static" onclick="document.getElementById('conv-detail-overlay').classList.remove('active')">✕</button>
+      </div>
+    </div>
+    <div class="conv-detail__messages" id="conv-detail-msgs"></div>
+    <div id="conv-detail-id" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ══ NAV ══ -->
+<nav class="nav">
+  <div class="nav__inner">
+    <div class="nav__logo" onclick="UI.setLoggedOut()">s<span>.chat</span></div>
+    <div class="nav__links">
+      <a href="#features">Funcionalidades</a>
+      <a href="#pricing">Precios</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="nav__actions" id="navActions">
+      <button class="btn-ghost" onclick="Auth.openLogin()">Iniciar sesión</button>
+      <button class="btn-primary" onclick="Auth.openRegister()">Empezar gratis</button>
+    </div>
+    <div class="nav__user hidden" id="navUser">
+      <div class="nav__avatar" id="navAvatar">S</div>
+      <span class="nav__username" id="navUsername"></span>
+      <button class="btn-logout" onclick="Auth.doLogout()">Salir</button>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ══════════════════════════════════
+     LANDING
+══════════════════════════════════ -->
+<div id="landingPage">
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero__eyebrow">
+        <span class="hero__eyebrow-dot"></span>
+        Disponible 24/7 · Respuesta en &lt;2 segundos
+      </div>
+      <h1 class="hero__title">Tu equipo de soporte<br><em>nunca duerme</em></h1>
+      <p class="hero__sub">Chatbot de atención al cliente con IA integrado en tu web o canales de mensajería empresarial. Sin esperas, sin fricción.</p>
+      <div class="hero__actions">
+        <button class="btn-cta" onclick="Auth.openRegister()">Empezar gratis</button>
+        <button class="btn-outline" onclick="document.getElementById('demoSection').scrollIntoView({behavior:'smooth'})">Ver demo</button>
+      </div>
+      <p class="hero__note">14 días gratis · Sin tarjeta de crédito · Cancela cuando quieras</p>
+    </div>
+  </section>
+
+  <section class="logos">
+    <div class="container">
+      <div class="logos__label">Usado por equipos de todo tipo</div>
+      <div class="logos__row">
+        <div class="logos__item">Shopify</div>
+        <div class="logos__item">Notion</div>
+        <div class="logos__item">Stripe</div>
+        <div class="logos__item">Figma</div>
+        <div class="logos__item">Linear</div>
+        <div class="logos__item">Vercel</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="demoSection" style="padding:5rem 0;background:var(--off-white)">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Demo en vivo</div>
+        <h2 class="section-title">Pruébalo ahora mismo</h2>
+        <p class="section-sub">Habla con el asistente de s.chat. Así es exactamente como lo verán tus clientes.</p>
+      </div>
+      <div class="demo-wrapper">
+        <div class="chat-demo">
+          <div class="chat-demo__bar">
+            <div class="chat-demo__dot"></div>
+            <div class="chat-demo__dot"></div>
+            <div class="chat-demo__dot"></div>
+            <div class="chat-demo__url">s.chat — Asistente</div>
+          </div>
+          <div class="chat-demo__header">
+            <div class="chat-demo__avatar">s.c</div>
+            <div>
+              <div class="chat-demo__name">Asistente s.chat</div>
+              <div class="chat-demo__status"><span class="status-dot"></span>En línea · Responde al instante</div>
+            </div>
+          </div>
+          <div class="chat-demo__messages" id="chatMessages">
+            <div class="msg">
+              <div class="msg__av">s.c</div>
+              <div class="msg__bubble">¡Hola! Soy el asistente de s.chat. Puedo responder tus dudas sobre el producto, precios e integración. ¿En qué te ayudo?</div>
+            </div>
+          </div>
+          <div class="chat-demo__suggestions" id="quickBtns">
+            <button class="suggestion-btn" onclick="Chat.sendQuick('¿Cómo funciona la integración?')">¿Cómo funciona?</button>
+            <button class="suggestion-btn" onclick="Chat.sendQuick('¿Qué canales soportáis?')">Canales disponibles</button>
+            <button class="suggestion-btn" onclick="Chat.sendQuick('¿Cuánto cuesta el plan Pro?')">Ver precios</button>
+            <button class="suggestion-btn" onclick="Chat.sendQuick('¿Tenéis prueba gratuita?')">Prueba gratis</button>
+          </div>
+          <div class="chat-demo__input">
+            <input id="chatInput" type="text" placeholder="Escribe tu pregunta..." />
+            <button class="btn-send" id="sendBtn" onclick="Chat.send()">Enviar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="container">
+      <div class="stats__grid">
+        <div><div class="stat__num">94<span>%</span></div><div class="stat__label">Satisfacción del cliente</div></div>
+        <div><div class="stat__num">&lt;2<span>s</span></div><div class="stat__label">Tiempo de respuesta medio</div></div>
+        <div><div class="stat__num">80<span>%</span></div><div class="stat__label">Consultas resueltas por IA</div></div>
+        <div><div class="stat__num">24<span>/7</span></div><div class="stat__label">Disponibilidad garantizada</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Funcionalidades</div>
+        <h2 class="section-title">Todo lo que necesitas,<br><em>nada que no necesitas</em></h2>
+        <p class="section-sub">Diseñado para equipos que quieren resultados reales, no complejidad innecesaria.</p>
+      </div>
+      <div class="features__grid">
+        <div class="feature-card">
+          <div class="feature-card__icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <h3>Respuestas instantáneas</h3>
+          <p>IA entrenada con tu documentación. Responde al instante, sin espera, sin errores.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card__icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+          <h3>Multicanal</h3>
+          <p>Web, WhatsApp, Telegram, Slack, Teams y más. Un solo panel para todo.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card__icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+          <h3>Escalado a humano</h3>
+          <p>Cuando el bot no sabe, transfiere al equipo con todo el contexto.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card__icon"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>
+          <h3>Analítica completa</h3>
+          <p>Métricas en tiempo real: conversaciones, satisfacción y rendimiento.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card__icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+          <h3>Seguridad GDPR</h3>
+          <p>Cifrado end-to-end, datos en Europa y cumplimiento GDPR desde el primer día.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card__icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+          <h3>Sin código</h3>
+          <p>Configura flujos conversacionales complejos con el editor visual.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="channels">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Canales</div>
+        <h2 class="section-title">Donde están tus clientes</h2>
+        <p class="section-sub">Integración nativa con los canales más usados. Sin desarrollos a medida.</p>
+      </div>
+      <div class="channels__grid">
+        <div class="channel-card"><span class="channel-card__dot" style="background:#25D366"></span><div><div class="channel-card__name">WhatsApp</div><div class="channel-card__type">Business API</div></div></div>
+        <div class="channel-card"><span class="channel-card__dot" style="background:#0088cc"></span><div><div class="channel-card__name">Telegram</div><div class="channel-card__type">Bot API</div></div></div>
+        <div class="channel-card"><span class="channel-card__dot" style="background:#4A154B"></span><div><div class="channel-card__name">Slack</div><div class="channel-card__type">Workspace</div></div></div>
+        <div class="channel-card"><span class="channel-card__dot" style="background:#0078D4"></span><div><div class="channel-card__name">Teams</div><div class="channel-card__type">Microsoft</div></div></div>
+        <div class="channel-card"><span class="channel-card__dot" style="background:#00B2FF"></span><div><div class="channel-card__name">Messenger</div><div class="channel-card__type">Facebook</div></div></div>
+        <div class="channel-card"><span class="channel-card__dot" style="background:#111"></span><div><div class="channel-card__name">Web Widget</div><div class="channel-card__type">Embed</div></div></div>
+        <div class="channel-card"><span class="channel-card__dot" style="background:#EA4335"></span><div><div class="channel-card__name">Gmail</div><div class="channel-card__type">Email</div></div></div>
+        <div class="channel-card"><span class="channel-card__dot" style="background:#6ab04c"></span><div><div class="channel-card__name">API REST</div><div class="channel-card__type">Custom</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="pricing">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Precios</div>
+        <h2 class="section-title">Simple y transparente</h2>
+        <p class="section-sub">Sin sorpresas. Sin costes ocultos. Escala cuando lo necesites.</p>
+      </div>
+      <div class="pricing__grid">
+        <div class="price-card">
+          <div class="price-card__name">Starter</div>
+          <div class="price-card__price">29€</div>
+          <div class="price-card__period">por mes</div>
+          <div class="price-card__desc">Para equipos pequeños que quieren empezar a automatizar su soporte.</div>
+          <div class="price-divider"></div>
+          <div class="price-items">
+            <div class="price-item">1 canal integrado</div>
+            <div class="price-item">1.000 conversaciones/mes</div>
+            <div class="price-item">Respuestas automáticas con IA</div>
+            <div class="price-item">Panel de analítica básico</div>
+            <div class="price-item">Soporte por email</div>
+          </div>
+          <button class="btn-price btn-price--light" onclick="Auth.openRegister()">Empezar gratis</button>
+        </div>
+        <div class="price-card price-card--featured">
+          <div class="price-badge">Más popular</div>
+          <div class="price-card__name">Pro</div>
+          <div class="price-card__price">79€</div>
+          <div class="price-card__period">por mes</div>
+          <div class="price-card__desc">Para empresas en crecimiento con múltiples canales.</div>
+          <div class="price-divider"></div>
+          <div class="price-items">
+            <div class="price-item">5 canales integrados</div>
+            <div class="price-item">10.000 conversaciones/mes</div>
+            <div class="price-item">Escalado a agente humano</div>
+            <div class="price-item">Analítica avanzada</div>
+            <div class="price-item">Soporte prioritario</div>
+          </div>
+          <button class="btn-price btn-price--dark" onclick="Auth.openRegister()">Empezar gratis</button>
+        </div>
+        <div class="price-card">
+          <div class="price-card__name">Enterprise</div>
+          <div class="price-card__price">—</div>
+          <div class="price-card__period">precio personalizado</div>
+          <div class="price-card__desc">Para grandes organizaciones con necesidades específicas.</div>
+          <div class="price-divider"></div>
+          <div class="price-items">
+            <div class="price-item">Canales ilimitados</div>
+            <div class="price-item">Conversaciones ilimitadas</div>
+            <div class="price-item">SLA garantizado</div>
+            <div class="price-item">Integración a medida</div>
+            <div class="price-item">Gestor de cuenta dedicado</div>
+          </div>
+          <button class="btn-price btn-price--light">Hablar con ventas</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="faq">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">FAQ</div>
+        <h2 class="section-title">Preguntas frecuentes</h2>
+      </div>
+      <div class="faq__list">
+        <div class="faq-item">
+          <button class="faq-item__q">¿Cuánto tiempo lleva la integración?<span class="faq-item__icon">+</span></button>
+          <div class="faq-item__a">En la mayoría de casos menos de 15 minutos. Para web solo necesitas pegar un snippet de código.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-item__q">¿Necesito saber programar?<span class="faq-item__icon">+</span></button>
+          <div class="faq-item__a">No. s.chat está diseñado para que cualquier persona pueda configurarlo sin escribir código. También tenemos API REST para integraciones avanzadas.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-item__q">¿La IA puede responder en mi idioma?<span class="faq-item__icon">+</span></button>
+          <div class="faq-item__a">Sí. s.chat soporta más de 50 idiomas y detecta automáticamente el idioma del cliente.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-item__q">¿Qué pasa cuando la IA no sabe la respuesta?<span class="faq-item__icon">+</span></button>
+          <div class="faq-item__a">El bot escala la conversación a un agente humano con todo el contexto para que pueda continuar sin que el cliente tenga que repetirse.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-item__q">¿Mis datos están seguros?<span class="faq-item__icon">+</span></button>
+          <div class="faq-item__a">Sí. Datos en servidores en Europa, cifrado AES-256 en reposo y TLS en tránsito. Cumplimiento RGPD garantizado.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-item__q">¿Puedo cancelar en cualquier momento?<span class="faq-item__icon">+</span></button>
+          <div class="faq-item__a">Sí, sin permanencia ni penalizaciones. Cancela desde tu panel cuando quieras.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <div class="container">
+      <div class="section-eyebrow">Empieza hoy</div>
+      <h2 class="section-title">Tu equipo de soporte<br><em>te está esperando</em></h2>
+      <p class="section-sub">Únete a cientos de empresas que ya atienden mejor a sus clientes con s.chat.</p>
+      <div class="hero__actions" style="justify-content:center;margin-top:2rem">
+        <button class="btn-cta" onclick="Auth.openRegister()">Crear cuenta gratis</button>
+        <button class="btn-outline">Ver una demo</button>
+      </div>
+      <p class="hero__note" style="margin-top:1rem">14 días gratis · Sin tarjeta · Cancela cuando quieras</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__logo">s<span>.chat</span></div>
+        <div class="footer__copy">© 2025 s.chat · Todos los derechos reservados</div>
+        <div class="footer__links">
+          <a href="#">Privacidad</a>
+          <a href="#">Términos</a>
+          <a href="#">Contacto</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /landingPage -->
+
+
+<!-- ══════════════════════════════════
+     DASHBOARD
+══════════════════════════════════ -->
+<div id="dashboardPage" style="display:none">
+  <div class="dash-layout">
+
+    <!-- Sidebar -->
+    <aside class="dash-sidebar">
+      <div id="nav-overview" class="dash-nav__item active" onclick="Dashboard.showView('overview')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Resumen
+      </div>
+      <div id="nav-conversations" class="dash-nav__item" onclick="Dashboard.showView('conversations')">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Conversaciones
+      </div>
+      <div id="nav-channels" class="dash-nav__item" onclick="Dashboard.showView('channels')">
+        <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 01.22 1.18 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.56-.56a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        Canales
+      </div>
+      <div id="nav-profile" class="dash-nav__item" onclick="Dashboard.showView('profile')">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Mi perfil
+      </div>
+      <div class="dash-sidebar__bottom">
+        <div class="dash-nav__item" onclick="Auth.doLogout()" style="border-left:none;color:var(--gray-400)">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Cerrar sesión
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="dash-main">
+
+      <!-- Vista: Resumen -->
+      <div id="view-overview" class="dash-view active">
+        <div class="dash-page-title">Resumen</div>
+        <div class="dash-page-sub">Actividad de tu chatbot en tiempo real</div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-card__label">Conversaciones hoy</div>
+            <div class="metric-card__value" id="stat-today">—</div>
+            <div class="metric-card__diff metric-card__diff--neutral">Esta semana: <span id="stat-week">—</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Total conversaciones</div>
+            <div class="metric-card__value" id="stat-msgs">—</div>
+            <div class="metric-card__diff metric-card__diff--neutral">Mensajes intercambiados</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Conversaciones abiertas</div>
+            <div class="metric-card__value" id="stat-open">—</div>
+            <div class="metric-card__diff">Pendientes de resolver</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Total conversaciones</div>
+            <div class="metric-card__value" id="stat-all">—</div>
+            <div class="metric-card__diff metric-card__diff--neutral">Histórico completo</div>
+          </div>
+        </div>
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-card__header">
+              <div class="dash-card__title">Conversaciones recientes</div>
+              <button class="btn-ghost" style="font-size:12px" onclick="Dashboard.showView('conversations')">Ver todas</button>
+            </div>
+            <div id="recent-convs"><div style="color:var(--gray-400);font-size:14px">Cargando...</div></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card__header">
+              <div class="dash-card__title">Por canal</div>
+            </div>
+            <div id="by-channel"><div style="color:var(--gray-400);font-size:14px">Cargando...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista: Conversaciones -->
+      <div id="view-conversations" class="dash-view">
+        <div class="dash-page-title">Conversaciones</div>
+        <div class="dash-page-sub">Historial completo de conversaciones del chatbot</div>
+        <div class="conversations-table">
+          <div class="conv-table-header">
+            <div>Visitante</div><div>Canal</div><div>Última actividad</div><div>Mensajes</div><div>Estado</div>
+          </div>
+          <div id="conv-table-body"></div>
+        </div>
+      </div>
+
+      <!-- Vista: Canales -->
+      <div id="view-channels" class="dash-view">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem">
+          <div class="dash-page-title">Canales</div>
+          <button class="btn-add" onclick="Dashboard.openChannelModal()">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo canal
+          </button>
+        </div>
+        <div class="dash-page-sub">Gestiona los canales donde está activo tu chatbot</div>
+        <div class="channels-list" id="channels-list"></div>
+      </div>
+
+      <!-- Vista: Perfil -->
+      <div id="view-profile" class="dash-view">
+        <div class="dash-page-title">Mi perfil</div>
+        <div class="dash-page-sub">Gestiona tu información y contraseña</div>
+        <div class="profile-card">
+          <div class="profile-avatar" id="profileAvatar">S</div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>Nombre completo</label>
+              <input type="text" id="profileName" placeholder="Tu nombre" />
+            </div>
+            <div class="form-field">
+              <label>Correo electrónico</label>
+              <input type="email" id="profileEmail" disabled style="opacity:0.5;cursor:not-allowed" />
+            </div>
+          </div>
+          <div class="form-divider"></div>
+          <div style="font-size:13px;font-weight:500;color:var(--gray-600);margin-bottom:1rem">Cambiar contraseña</div>
+          <div class="form-field">
+            <label>Nueva contraseña <span style="color:var(--gray-300);font-weight:400">(deja en blanco para no cambiar)</span></label>
+            <input type="password" id="profilePass" placeholder="Mínimo 6 caracteres" />
+          </div>
+          <button class="btn-save" onclick="Dashboard.saveProfile()">Guardar cambios</button>
+          <div class="form-msg" id="profileMsg"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div><!-- /dashboardPage -->
+
+
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+<script>UI.init();</script>
+</body>
+</html>
